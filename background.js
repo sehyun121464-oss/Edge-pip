@@ -24,17 +24,47 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
 
 async function togglePip(tab) {
   if (!tab?.id) return;
+  const tabId = tab.id;
+
+  // 1단계: 모든 프레임(iframe 포함)에 탐지 스크립트를 주입하고 각 프레임의 최고 점수를 받는다.
+  // 사용자 제스처(클릭·단축키) 직후에 주입해야 프레임에 PiP 허용 상태가 생긴다.
+  let results;
   try {
-    // 사용자 제스처(클릭·단축키) 직후 바로 주입해야 requestPictureInPicture()가 허용된다.
-    // 1주차는 최상위 프레임만 대상 (iframe은 2주차, F-04).
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['content/pip.js'],
+    results = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      files: ['content/detector.js', 'content/pip.js'],
     });
   } catch (err) {
     // edge:// 페이지, Add-ons 스토어 등 주입이 막힌 페이지
     console.warn('[Edge PiP] 스크립트 주입 실패:', err?.message ?? err);
-    flashError(tab.id);
+    flashError(tabId);
+    return;
+  }
+
+  const frames = results.filter((r) => r?.result);
+
+  // PiP가 켜져 있던 프레임은 1단계에서 이미 껐다.
+  if (frames.some((r) => r.result.inPip)) return;
+
+  let best = null;
+  for (const r of frames) {
+    if (r.result.score >= 0 && (!best || r.result.score > best.result.score)) best = r;
+  }
+  if (!best) {
+    console.warn('[Edge PiP] NO_VIDEO: 재생 가능한 동영상을 찾지 못했습니다.');
+    flashError(tabId);
+    return;
+  }
+
+  // 2단계: 점수가 가장 높은 프레임에서만 PiP 진입
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, frameIds: [best.frameId] },
+      func: () => window.__edgePip.enter(),
+    });
+  } catch (err) {
+    console.warn('[Edge PiP] PiP 진입 실패:', err?.message ?? err);
+    flashError(tabId);
   }
 }
 

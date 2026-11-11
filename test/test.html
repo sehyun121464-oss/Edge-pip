@@ -5,25 +5,59 @@
 <title>Edge PiP 테스트 페이지</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 24px; background: #f5f5f5; color: #222; }
-  video { display: block; margin: 12px 0; background: #000; }
+  video { display: block; margin: 8px 0; background: #000; width: 480px; max-width: 100%; }
   .small { width: 80px; }
-  .big { width: 640px; max-width: 100%; }
+  iframe { border: 2px dashed #888; width: 520px; max-width: 100%; height: 300px; background: #fff; }
+  section { margin: 24px 0; padding: 12px 16px; background: #fff; border-radius: 8px; }
+  h2 { margin: 0 0 4px; font-size: 18px; }
+  .controls { position: sticky; top: 0; background: #f5f5f5; padding: 8px 0; z-index: 1; }
+  .controls button { margin: 4px 4px 4px 0; padding: 6px 12px; font-size: 14px; }
+  .controls button.on { background: #0f6cbd; color: #fff; border-color: #0f6cbd; }
   code { background: #e8e8e8; padding: 1px 4px; border-radius: 3px; }
+  .expect { color: #555; font-size: 14px; }
 </style>
 </head>
 <body>
 <h1>Edge PiP 테스트</h1>
-<p>아래 큰 영상이 선택되어야 합니다. 툴바 아이콘을 클릭하거나 <code>Alt+P</code>를 누르세요. 한 번 더 누르면 PiP가 꺼집니다.</p>
+<p>아래 버튼으로 <b>재생할 영상 하나</b>를 고른 뒤 툴바 아이콘을 클릭하거나 <code>Alt+P</code>를 누르세요.
+재생 중인 영상이 PiP로 떠야 합니다. 한 번 더 누르면 꺼집니다.</p>
 
-<h2>작은 영상 (너비 80px, 선택 대상에서 제외되어야 함)</h2>
-<video class="small" id="small" muted autoplay playsinline></video>
+<div class="controls">
+  재생할 영상:
+  <button data-play="main">① 일반 영상</button>
+  <button data-play="frame">② iframe 안 영상</button>
+  <button data-play="open">③ Shadow DOM (open)</button>
+  <button data-play="closed">④ Shadow DOM (closed)</button>
+  <button data-play="blocked">⑤ PiP 차단 영상</button>
+</div>
 
-<h2>큰 영상 (선택되어야 함)</h2>
-<video class="big" id="big" muted autoplay playsinline></video>
+<section>
+  <h2>① 일반 영상</h2>
+  <video id="main" muted playsinline></video>
+  <p class="expect">작은 영상(아래, 너비 80px)은 재생 중이어도 선택되면 안 됩니다.</p>
+  <video id="small" class="small" muted playsinline autoplay></video>
+</section>
 
-<h2>PiP 차단 영상 (disablePictureInPicture)</h2>
-<p>큰 영상을 일시정지하고 이 영상만 재생하면, 1주차 버전에서는 아이콘에 빨간 "!" 배지가 떠야 합니다.</p>
-<video class="big" id="blocked" muted playsinline controls disablepictureinpicture></video>
+<section>
+  <h2>② iframe 안 영상 (F-04)</h2>
+  <iframe id="frame" src="frame.html"></iframe>
+</section>
+
+<section>
+  <h2>③ Shadow DOM (open)</h2>
+  <div id="open-host"></div>
+</section>
+
+<section>
+  <h2>④ Shadow DOM (closed)</h2>
+  <div id="closed-host"></div>
+</section>
+
+<section>
+  <h2>⑤ PiP 차단 영상 (F-05, <code>disablePictureInPicture</code>)</h2>
+  <p class="expect">2주차부터는 차단을 풀고 PiP로 떠야 합니다.</p>
+  <video id="blocked" muted playsinline controls disablepictureinpicture></video>
+</section>
 
 <script>
   // 외부 파일 없이 canvas로 영상 스트림을 만든다.
@@ -47,9 +81,34 @@
     return canvas.captureStream(30);
   }
 
-  document.getElementById('small').srcObject = makeStream('SMALL', 0);
-  document.getElementById('big').srcObject = makeStream('MAIN VIDEO', 200);
-  document.getElementById('blocked').srcObject = makeStream('BLOCKED', 120);
+  function shadowVideo(hostId, mode, label, hue) {
+    const root = document.getElementById(hostId).attachShadow({ mode });
+    root.innerHTML = '<style>video{display:block;width:480px;max-width:100%;background:#000}</style><video muted playsinline></video>';
+    const v = root.querySelector('video');
+    v.srcObject = makeStream(label, hue);
+    return v;
+  }
+
+  const videos = {
+    main: document.getElementById('main'),
+    open: shadowVideo('open-host', 'open', '③ SHADOW OPEN', 280),
+    closed: shadowVideo('closed-host', 'closed', '④ SHADOW CLOSED', 330),
+    blocked: document.getElementById('blocked'),
+  };
+  videos.main.srcObject = makeStream('① MAIN', 200);
+  videos.blocked.srcObject = makeStream('⑤ BLOCKED', 120);
+  document.getElementById('small').srcObject = makeStream('S', 0);
+
+  const frame = document.getElementById('frame');
+
+  function playOnly(key) {
+    for (const [k, v] of Object.entries(videos)) k === key ? v.play() : v.pause();
+    frame.contentWindow.postMessage(key === 'frame' ? 'play' : 'pause', '*');
+    for (const b of document.querySelectorAll('[data-play]')) b.classList.toggle('on', b.dataset.play === key);
+  }
+  for (const b of document.querySelectorAll('[data-play]')) b.addEventListener('click', () => playOnly(b.dataset.play));
+  playOnly('main');
+  frame.addEventListener('load', () => playOnly('main'));
 </script>
 </body>
 </html>

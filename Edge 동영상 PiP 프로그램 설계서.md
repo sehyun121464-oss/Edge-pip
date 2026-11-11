@@ -163,7 +163,9 @@ edge-pip/
 
 **주 동영상 선택 점수**
 
-점수 = 재생 중(+100) + 화면에 보이는 면적 비율 × 50 + 소리 켜짐(+20) + 길이 10초 이상(+10). 너비 100px 미만 또는 `readyState`가 0인 영상은 제외한다. 프레임마다 최고 점수를 보고하면 background가 전체 최고점 프레임에 PiP 명령을 보낸다.
+점수 = 재생 중(+100) + 화면에 보이는 면적 비율 × 50 + 소리 켜짐(+20) + 길이 10초 이상(+10). 면적 비율은 프레임끼리 비교할 수 있도록 프레임 뷰포트가 아닌 모니터 화면(`screen.width × screen.height`) 기준으로 계산한다. 너비 100px 미만 또는 `readyState`가 0인 영상은 제외한다.
+
+프레임 간 선택은 메시지 대신 `scripting.executeScript`를 두 번 호출해 처리한다(사용자 제스처 유지). 1단계에서 모든 프레임에 주입해 각 프레임의 최고 점수를 반환값으로 받고, 2단계에서 최고점 프레임(`frameIds`)에만 PiP 진입 함수를 실행한다.
 
 **메시지 규격**
 
@@ -205,8 +207,8 @@ Edge의 라이트/다크 테마를 `prefers-color-scheme`으로 따라간다.
 | 탭 전환 자동 PiP | 탭 전환은 해당 페이지의 제스처가 아님 | Media Session `enterpictureinpicture` 액션 등록(Edge 120+ 자동 PiP 지원) 활용, 미지원 환경에서는 기능 비활성화 |
 | `disablePictureInPicture` 속성 | 사이트가 PiP 차단 | 요청 직전 속성 제거 후 호출 |
 | iframe 안의 영상 | 다른 출처 프레임 | `allFrames: true`로 주입, `frameId`로 대상 지정 |
-| Shadow DOM 안의 영상 | 일반 선택자로 보이지 않음 | 열린 shadowRoot를 재귀 탐색 (닫힌 shadowRoot는 미지원) |
-| 동적으로 교체되는 영상 | SPA에서 `<video>` 요소가 바뀜 | `MutationObserver`로 감지, PiP 중이면 새 요소로 재연결 |
+| Shadow DOM 안의 영상 | 일반 선택자로 보이지 않음 | shadowRoot를 재귀 탐색, 닫힌 shadowRoot도 `chrome.dom.openOrClosedShadowRoot()`로 탐색 |
+| 동적으로 교체되는 영상 | SPA에서 `<video>` 요소가 바뀌면 PiP가 닫힘 | 사용자 제스처 없이 PiP를 다시 열 수 없어 자동 재연결은 보류, 단축키를 다시 누르도록 안내 |
 | DRM(예: Netflix) 영상 | Edge의 PlayReady 보호 | 대부분 표준 PiP로 동작하나 실패 시 안내 메시지만 표시, 우회하지 않음 |
 | `<canvas>` 기반 플레이어 | `<video>` 요소 없음 | 1차 버전 미지원, 후속으로 Document PiP 검토 |
 | 제한 페이지 | `edge://`, Edge Add-ons 스토어는 스크립트 주입 불가 | 팝업에 "이 페이지에서는 사용할 수 없음" 표시 |

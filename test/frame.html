@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>iframe 안 영상</title>
+<style>
+  body { margin: 8px; font-family: system-ui, sans-serif; }
+  video { display: block; width: 480px; max-width: 100%; background: #000; }
+</style>
+</head>
+<body>
+<div>iframe 내부 (test/frame.html)</div>
+<video id="v" muted playsinline></video>
+<script>
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 360;
+  const ctx = canvas.getContext('2d');
+  let frame = 0;
+  (function draw() {
+    frame++;
+    ctx.fillStyle = `hsl(${(40 + frame) % 360} 60% 35%)`;
+    ctx.fillRect(0, 0, 640, 360);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 48px system-ui';
+    ctx.fillText('② IFRAME', 40, 120);
+    ctx.font = '32px system-ui';
+    ctx.fillText(new Date().toLocaleTimeString(), 40, 200);
+    requestAnimationFrame(draw);
+  })();
+
+  const v = document.getElementById('v');
+  v.srcObject = canvas.captureStream(30);
+  addEventListener('message', (e) => {
+    if (e.data === 'play') v.play();
+    if (e.data === 'pause') v.pause();
+  });
+</script>
+</body>
+</html>
