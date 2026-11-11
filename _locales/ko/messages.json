@@ -1,0 +1,6 @@
+{
+  "appName": { "message": "Edge PiP" },
+  "appDesc": { "message": "재생 중인 동영상을 클릭 한 번 또는 단축키로 PiP 창에 띄웁니다." },
+  "actionTitle": { "message": "PiP 켜기/끄기 (Alt+P)" },
+  "cmdToggle": { "message": "PiP 켜기/끄기" }
+}

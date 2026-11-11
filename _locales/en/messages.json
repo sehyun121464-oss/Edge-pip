@@ -1,0 +1,6 @@
+{
+  "appName": { "message": "Edge PiP" },
+  "appDesc": { "message": "Pop the playing video out into a Picture-in-Picture window with one click or a shortcut." },
+  "actionTitle": { "message": "Toggle PiP (Alt+P)" },
+  "cmdToggle": { "message": "Toggle Picture-in-Picture" }
+}

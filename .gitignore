@@ -1,0 +1,16 @@
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Packaging
+*.zip
+*.crx
+*.pem
+
+# Dependencies (later: Jest, Playwright)
+node_modules/

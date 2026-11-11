@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Edge PiP 테스트 페이지</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; background: #f5f5f5; color: #222; }
+  video { display: block; margin: 12px 0; background: #000; }
+  .small { width: 80px; }
+  .big { width: 640px; max-width: 100%; }
+  code { background: #e8e8e8; padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>Edge PiP 테스트</h1>
+<p>아래 큰 영상이 선택되어야 합니다. 툴바 아이콘을 클릭하거나 <code>Alt+P</code>를 누르세요. 한 번 더 누르면 PiP가 꺼집니다.</p>
+
+<h2>작은 영상 (너비 80px, 선택 대상에서 제외되어야 함)</h2>
+<video class="small" id="small" muted autoplay playsinline></video>
+
+<h2>큰 영상 (선택되어야 함)</h2>
+<video class="big" id="big" muted autoplay playsinline></video>
+
+<h2>PiP 차단 영상 (disablePictureInPicture)</h2>
+<p>큰 영상을 일시정지하고 이 영상만 재생하면, 1주차 버전에서는 아이콘에 빨간 "!" 배지가 떠야 합니다.</p>
+<video class="big" id="blocked" muted playsinline controls disablepictureinpicture></video>
+
+<script>
+  // 외부 파일 없이 canvas로 영상 스트림을 만든다.
+  function makeStream(label, hue) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 360;
+    const ctx = canvas.getContext('2d');
+    let frame = 0;
+    (function draw() {
+      frame++;
+      ctx.fillStyle = `hsl(${(hue + frame) % 360} 60% 35%)`;
+      ctx.fillRect(0, 0, 640, 360);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 48px system-ui';
+      ctx.fillText(label, 40, 120);
+      ctx.font = '32px system-ui';
+      ctx.fillText(new Date().toLocaleTimeString(), 40, 200);
+      requestAnimationFrame(draw);
+    })();
+    return canvas.captureStream(30);
+  }
+
+  document.getElementById('small').srcObject = makeStream('SMALL', 0);
+  document.getElementById('big').srcObject = makeStream('MAIN VIDEO', 200);
+  document.getElementById('blocked').srcObject = makeStream('BLOCKED', 120);
+</script>
+</body>
+</html>
