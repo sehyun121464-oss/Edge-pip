@@ -138,7 +138,7 @@ edge-pip/
   "version": "1.0.0",
   "default_locale": "ko",
   "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
-  "optional_host_permissions": ["<all_urls>"],
+  "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js" },
   "action": { "default_popup": "popup/popup.html" },
   "commands": {
@@ -163,7 +163,7 @@ edge-pip/
 
 **주 동영상 선택 점수**
 
-점수 = 재생 중(+100) + 화면에 보이는 면적 비율 × 50 + 소리 켜짐(+20) + 길이 10초 이상(+10). 면적 비율은 프레임끼리 비교할 수 있도록 프레임 뷰포트가 아닌 모니터 화면(`screen.width × screen.height`) 기준으로 계산한다. 너비 100px 미만 또는 `readyState`가 0인 영상은 제외한다.
+점수 = 재생 중(+50) + 화면에 보이는 면적 비율 × 100 + 소리 켜짐(+20) + 길이 60초 이상 또는 라이브(+20). 작게 자동 재생되는 광고가 일시정지된 큰 본 영상을 이기지 못하도록 면적과 길이 비중을 높였다(예: 본 영상 1280×720 일시정지 ≈ 84점, 300×170 팝업 광고 재생 중 ≈ 52점). 면적 비율은 프레임끼리 비교할 수 있도록 프레임 뷰포트가 아닌 모니터 화면(`screen.width × screen.height`) 기준으로 계산한다. 너비 100px 미만 또는 `readyState`가 0인 영상은 제외한다.
 
 프레임 간 선택은 메시지 대신 `scripting.executeScript`를 두 번 호출해 처리한다(사용자 제스처 유지). 1단계에서 모든 프레임에 주입해 각 프레임의 최고 점수를 반환값으로 받고, 2단계에서 최고점 프레임(`frameIds`)에만 PiP 진입 함수를 실행한다.
 
@@ -207,7 +207,7 @@ Edge의 라이트/다크 테마를 `prefers-color-scheme`으로 따라간다.
 | 탭 전환 자동 PiP | 탭 전환은 해당 페이지의 제스처가 아님 | Media Session `enterpictureinpicture` 액션 등록(Edge 120+ 자동 PiP 지원) 활용, 미지원 환경에서는 기능 비활성화 |
 | `disablePictureInPicture` 속성 | 사이트가 PiP 차단 | 요청 직전 속성 제거 후 호출 |
 | iframe 안의 영상 | 다른 출처 프레임 | `allFrames: true`로 주입, `frameId`로 대상 지정 |
-| Shadow DOM 안의 영상 | 일반 선택자로 보이지 않음 | shadowRoot를 재귀 탐색, 닫힌 shadowRoot도 `chrome.dom.openOrClosedShadowRoot()`로 탐색 |
+| Shadow DOM 안의 영상 | 일반 선택자로 보이지 않음 | shadowRoot를 재귀 탐색, 닫힌 shadowRoot도 `chrome.dom.openOrClosedShadowRoot()`로 탐색 (이 API는 HTMLElement만 받으므로 SVG 등은 제외) |
 | 동적으로 교체되는 영상 | SPA에서 `<video>` 요소가 바뀌면 PiP가 닫힘 | 사용자 제스처 없이 PiP를 다시 열 수 없어 자동 재연결은 보류, 단축키를 다시 누르도록 안내 |
 | DRM(예: Netflix) 영상 | Edge의 PlayReady 보호 | 대부분 표준 PiP로 동작하나 실패 시 안내 메시지만 표시, 우회하지 않음 |
 | `<canvas>` 기반 플레이어 | `<video>` 요소 없음 | 1차 버전 미지원, 후속으로 Document PiP 검토 |
@@ -215,7 +215,7 @@ Edge의 라이트/다크 테마를 `prefers-color-scheme`으로 따라간다.
 
 ## 9. 보안·권한 및 개인정보
 
-기본은 `activeTab` 최소 권한으로 동작하고, 모든 사이트 접근 권한은 자동 PiP를 켤 때만 요청한다.
+모든 사이트 접근 권한(`<all_urls>`)을 설치 시 받는다. 본 영상 플레이어가 다른 도메인 iframe에 있는 사이트가 많아 `activeTab`만으로는 플레이어에 접근할 수 없기 때문이다(예: 페이지는 a.com, 플레이어는 b-cdn.com). 스크립트는 여전히 사용자가 아이콘·단축키를 누른 탭에만 주입한다.
 
 | 권한 | 용도 | 요청 시점 |
 | --- | --- | --- |
@@ -223,7 +223,7 @@ Edge의 라이트/다크 테마를 `prefers-color-scheme`으로 따라간다.
 | `scripting` | 콘텐츠 스크립트 주입 | 설치 시 |
 | `storage` | 설정 저장 | 설치 시 |
 | `contextMenus` | 우클릭 메뉴 | 설치 시 |
-| `<all_urls>` (선택) | 탭 전환 자동 PiP | 설정에서 자동 PiP를 켤 때 `permissions.request` |
+| `<all_urls>` | 다른 도메인 iframe 안의 플레이어 접근, 탭 전환 자동 PiP | 설치 시 (설치 화면에 "모든 웹 사이트의 데이터 읽기 및 변경" 경고) |
 
 - 외부 서버 통신, 분석 도구, 원격 코드 로드 없음 (MV3 CSP 기본값 유지)
 - 저장 데이터는 설정값과 사용자가 입력한 사이트 도메인뿐이며 `storage.sync`로 Edge 계정에만 동기화

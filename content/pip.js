@@ -13,7 +13,9 @@
     const report = (msg) => {
       chrome.runtime.sendMessage(msg).catch(() => {});
     };
-    const reportError = (code, message) => report({ type: 'PIP_ERROR', code, message });
+    // activation: 브라우저가 '사용자가 방금 조작했다'고 인정하는 상태인지 (PiP 허용 조건)
+    const isActive = () => navigator.userActivation?.isActive ?? null;
+    const reportError = (code, message) => report({ type: 'PIP_ERROR', code, message, activation: isActive() });
 
     // enter/leave 이벤트는 video 요소에서만 발생하고 버블링되지 않으므로 영상마다 한 번씩 등록
     const watch = (video) => {
@@ -45,10 +47,20 @@
         return { inPip: true };
       }
       candidate = null;
-      if (!document.pictureInPictureEnabled) return { inPip: false, score: -1 };
-      const best = window.__edgePipDetector.findBest();
-      candidate = best?.video ?? null;
-      return { inPip: false, score: best ? best.score : -1 };
+      const activation = isActive();
+      if (!document.pictureInPictureEnabled) return { inPip: false, score: -1, activation };
+      try {
+        const best = window.__edgePipDetector.findBest();
+        candidate = best?.video ?? null;
+        let info;
+        try {
+          info = window.__edgePipDetector.describe();
+        } catch {}
+        return { inPip: false, score: best ? best.score : -1, activation, info };
+      } catch (err) {
+        // 한 프레임의 오류가 전체 선택을 망치지 않도록 하고, 원인은 background 로그로 보낸다.
+        return { inPip: false, score: -1, activation, error: `${err?.name}: ${err?.message}` };
+      }
     };
 
     const enter = async () => {
